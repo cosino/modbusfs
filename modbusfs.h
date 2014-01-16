@@ -37,6 +37,9 @@
 
 #define NAME                    program_invocation_short_name
 
+#define __to_str(s)	#s
+#define to_str(s)	__to_str(s)
+
 #define info(fmt, args...)                                            \
                 printf(fmt "\n" , ## args)
 
@@ -120,9 +123,10 @@ enum modbus_type_e {
 	__TYPE_ERROR
 };
 
+#define SERIAL_DEV_MAX		32
 struct modbus_parms_s {
 	struct modbus_rtu_parms_s {
-		char *serial_dev;
+		char serial_dev[SERIAL_DEV_MAX + 1];
 		int baud;
 		int bytes;
 		char parity;

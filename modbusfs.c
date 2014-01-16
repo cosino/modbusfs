@@ -44,17 +44,25 @@ static struct modbus_parms_s modbus_parms = {
 
 static int parse_rtu_opts(char *opts)
 {
-	char *str;
 	int ret;
 
-	ret = sscanf(opts, "%a[a-z]:%a[a-zA-Z0-9/_],%d,%d%c%d", &str,
-		     &modbus_parms.rtu.serial_dev,
+	if (strlen(opts) == 0)
+		return 0;	/* use defaults */
+
+	ret = sscanf(opts, "%" to_str(SERIAL_DEV_MAX) "[a-zA-Z0-9/_],%d,%d%c%d",
+		     modbus_parms.rtu.serial_dev,
 		     &modbus_parms.rtu.baud,
 		     &modbus_parms.rtu.bytes,
 		     &modbus_parms.rtu.parity, &modbus_parms.rtu.stop);
-	free(str);
 	if (ret < 1)
 		return -1;
+
+	dbg("serial_dev=%s baud=%d bytes=%d parity=%c stop=%d",
+				     modbus_parms.rtu.serial_dev,
+				     modbus_parms.rtu.baud,
+				     modbus_parms.rtu.bytes,
+				     modbus_parms.rtu.parity,
+				     modbus_parms.rtu.stop);
 
 	return 0;
 }
@@ -67,7 +75,7 @@ static void usage(void)
 {
 	fprintf(stderr, "usage: %s [<dev>] <mountpoint> [options]\n", NAME);
 	fprintf(stderr, "where <dev> can be:\n\n"
-		"\trtu[:<ttydev>[,<baud>[,<bits><parity><stop>]]]\n");
+		"\trtu:[<ttydev>[,<baud>[,<bits><parity><stop>]]]\n");
 	fprintf(stderr, "\n");
 }
 
@@ -75,7 +83,7 @@ int main(int argc, char *argv[])
 {
 	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 	int i;
-	char *str;
+	char *ptr;
 	int ret;
 
 	/*
@@ -90,17 +98,16 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		ret = sscanf(argv[i], "%a[a-z]", &str);
-		if (ret == 1 && strcmp(str, "rtu") == 0) {
+		ptr = index(argv[i], ':');
+		if (ptr && strncmp(argv[i], "rtu", sizeof("rtu") - 1) == 0) {
 			modbus_type = RTU;
 
-			ret = parse_rtu_opts(argv[i]);
+			ret = parse_rtu_opts(ptr + 1);
 			if (ret < 0) {
 				err("invalid RTU options");
 				exit(EXIT_FAILURE);
 			}
 
-			free(str);
 			continue;
 		}
 
